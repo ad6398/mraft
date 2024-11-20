@@ -1,0 +1,4 @@
+quantization-strategy: "4bit" # accepted value 4bit or 8bit
+
+colpali-model-name: "vidore/colpali-v1.2" # laura pretrained colpali model name or path
+
