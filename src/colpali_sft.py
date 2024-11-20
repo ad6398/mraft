@@ -90,3 +90,69 @@ processor = cast(
 )
 collator = VisualRetrieverCollator(processor=processor)
 
+dataset_name = colpali_config["dataset-name"]
+
+train_ds = cast(DatasetDict, load_dataset(dataset_name))
+# for time being
+ds = train_ds.rename_column("page_image", "image")
+ds["train"] = ds["train"].shuffle(seed=42)
+print(train_ds)
+
+
+checkpoints_dir = colpali_config["output-dir"]
+checkpoints_dir.mkdir(exist_ok=True, parents=True)
+
+training_args = TrainingArguments(
+    output_dir=str(checkpoints_dir),
+    # hub_model_id=hf_pushed_model_name if hf_pushed_model_name else None,
+    overwrite_output_dir=True,
+    num_train_epochs=1.5,
+    per_device_train_batch_size=4,
+    per_device_eval_batch_size=4,
+    gradient_accumulation_steps=4,
+    gradient_checkpointing=False,
+    eval_strategy="steps",
+    save_steps=200,
+    logging_steps=20,
+    eval_steps=100,
+    warmup_steps=100,
+    learning_rate=5e-5,
+    save_total_limit=1,
+    # report_to=["wandb"] if wandb_experiment_name else [], TODO(AD)
+)
+
+
+class EvaluateFirstStepCallback(TrainerCallback):
+    """
+    Run eval after the first training step.
+    Used to have a more precise evaluation learning curve.
+    """
+
+    def on_step_end(self, args, state, control, **kwargs):
+        if state.global_step == 1:
+            control.should_evaluate = True
+
+
+trainer = ContrastiveTrainer(
+    model=model,
+    train_dataset=ds["train"],
+    eval_dataset=ds["test"],
+    args=training_args,
+    data_collator=collator,
+    loss_func=ColbertPairwiseCELoss(),
+    is_vision_model=True,
+)
+
+trainer.args.remove_unused_columns = False
+trainer.add_callback(EvaluateFirstStepCallback())
+
+train_results = trainer.train()
+
+print("train results", train_results)
+
+eval_results = trainer.evaluate()
+
+
+print("eval results", eval_results)
+
+

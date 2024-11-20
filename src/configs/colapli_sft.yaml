@@ -2,3 +2,10 @@ quantization-strategy: "4bit" # accepted value 4bit or 8bit
 
 colpali-model-name: "vidore/colpali-v1.2" # laura pretrained colpali model name or path
 
+# as from processor it appears it need image and query only https://github.com/illuin-tech/colpali/blob/main/colpali_engine/collators/visual_retriever_collator.py#L51
+dataset-name: "vidore/vdsid_french"
+
+# save path
+
+output-dir: "output"
+
