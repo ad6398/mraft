@@ -99,14 +99,14 @@ ds["train"] = ds["train"].shuffle(seed=42)
 print(train_ds)
 
 
-checkpoints_dir = colpali_config["output-dir"]
+checkpoints_dir = Path(colpali_config["output-dir"])
 checkpoints_dir.mkdir(exist_ok=True, parents=True)
 
 training_args = TrainingArguments(
     output_dir=str(checkpoints_dir),
     # hub_model_id=hf_pushed_model_name if hf_pushed_model_name else None,
     overwrite_output_dir=True,
-    num_train_epochs=1.5,
+    num_train_epochs=0.2,
     per_device_train_batch_size=4,
     per_device_eval_batch_size=4,
     gradient_accumulation_steps=4,
@@ -114,7 +114,7 @@ training_args = TrainingArguments(
     eval_strategy="steps",
     save_steps=200,
     logging_steps=20,
-    eval_steps=100,
+    eval_steps=200,
     warmup_steps=100,
     learning_rate=5e-5,
     save_total_limit=1,

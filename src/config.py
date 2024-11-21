@@ -8,7 +8,7 @@ def get_config(file_path):
     return config
 
 def get_colpali_config():
-    COLPALI_CONFIG_PATH = 'configs/colpali_sft.yaml'
+    COLPALI_CONFIG_PATH = './configs/colapli_sft.yaml'
     return get_config(COLPALI_CONFIG_PATH)
 
 
