@@ -3,7 +3,9 @@ import numpy as np
 import safetensors.torch
 import torch
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Tuple
+import faiss
+import json
 
 def load_all_image_embeddings(embedding_dir: str):
     # Collect all embedding files
@@ -77,3 +79,27 @@ def load_multiple_query_embeddings(
             else:
                 raise
     return embeddings
+
+
+def load_index(index_dir: str) -> Tuple[faiss.Index, List[str]]:
+    """
+    Load FAISS index and keys from the given directory.
+
+    Args:
+        index_dir: Path to directory containing 'image_embeddings.index' and 'keys.json'
+    Returns:
+        index: FAISS index instance
+        keys: List of image ID strings
+    """
+    index_path = index_dir + "/image_embeddings.index"
+    keys_path = index_dir + "/keys.json"
+
+    print(f"Loading FAISS index from {index_path}")
+    index = faiss.read_index(str(index_path))
+
+    print(f"Loading keys from {keys_path}")
+    with open(keys_path, "r") as f:
+        keys = json.load(f)
+
+    return index, keys
+
