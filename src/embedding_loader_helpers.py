@@ -81,7 +81,7 @@ def load_multiple_query_embeddings(
     return embeddings
 
 
-def load_index(index_dir: str) -> Tuple[faiss.Index, List[str]]:
+def load_image_index(index_dir: str) -> Tuple[faiss.Index, List[str]]:
     """
     Load FAISS index and keys from the given directory.
 
@@ -102,4 +102,5 @@ def load_index(index_dir: str) -> Tuple[faiss.Index, List[str]]:
         keys = json.load(f)
 
     return index, keys
+
 
