@@ -73,16 +73,6 @@ def download_mpdocvqa_data(hf_token: str, cache_dir: str = None) -> str:
     return local_dir # equal to cache_dir
 
 
-# if __name__ == "__main__":
-#     # Get token from environment variable or prompt user
-#     hf_token = os.getenv("HF_TOKEN") or input("Please enter your Hugging Face API token: ")
-#     # Optionally set a custom cache directory, e.g., "./hf_cache"
-#     data_dir = download_mpdocvqa_data(hf_token, cache_dir="./hf_cache")
-#     print(f"Data downloaded to: {data_dir}")
-
-
-
-
 import torch
 
 from typing import Optional
