@@ -4,6 +4,14 @@ from huggingface_hub import snapshot_download
 import os
 import tarfile
 import time
+import torch
+
+from typing import Optional
+from transformers import BitsAndBytesConfig
+
+from transformers.utils.import_utils import is_flash_attn_2_available
+
+from colpali_engine.models import ColQwen2_5, ColQwen2_5_Processor
 
 
 def extract_tar_gz_with_progress(tar_path: str, dest_dir: str, update_interval: int = 10000) -> None:
@@ -71,16 +79,6 @@ def download_mpdocvqa_data(hf_token: str, cache_dir: str = None) -> str:
         print(f"No {gz_filename} found in {local_dir}")
 
     return local_dir # equal to cache_dir
-
-
-import torch
-
-from typing import Optional
-from transformers import BitsAndBytesConfig
-
-from transformers.utils.import_utils import is_flash_attn_2_available
-
-from colpali_engine.models import ColQwen2_5, ColQwen2_5_Processor
 
 
 def setup_quantization(quantization_startegy = None, device="auto") -> Optional[BitsAndBytesConfig]:
