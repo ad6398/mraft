@@ -41,6 +41,10 @@ def parse_args():
         "--batch_size", type=int, default=8,
         help="Number of images to process per batch"
     )
+    parser.add_argument(
+        "--quantization", type=str, default=None,
+        help="Quantization config (e.g. '4bit', '8bit', or None for bf16)"
+    )
     return parser.parse_args()
 
 
@@ -59,6 +63,8 @@ def main(args=None):
     input_path = Path(args.input_dir)
     output_path = Path(args.output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
+    quantization = args.quantization
+
 
     # Determine device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -66,7 +72,9 @@ def main(args=None):
 
     # Load model and processor
     model, processor = load_model_processor_inference(
-        args.model_name_or_path, device
+        model_name=args.model_name_or_path, 
+        quantization=quantization,
+        devic=device, 
     )
 
     # Gather image files

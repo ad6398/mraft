@@ -61,7 +61,7 @@ def parse_args():
     )
     p.add_argument(
         "--quantization", type=str, default=None,
-        help="Quantization config (e.g. 'int8', 'bfloat16', or None)"
+        help="Quantization config (e.g. '4bit', '8bit', or None for bf16)"
     )
     return p.parse_args()
 
@@ -76,7 +76,8 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, processor = load_model_processor_inference(
         model_name=args.model_name_path,
-        quantization=args.quantization
+        quantization=args.quantization,
+        devic=device
     )
     model.to(device).eval()
 
