@@ -56,7 +56,7 @@ def parse_args():
         help="Batch size for embedding forward pass"
     )
     p.add_argument(
-        "--model_name_path", type=str, required=True,
+        "--model_name_or_path", type=str, required=True,
         help="Path or HF name of your pretrained model"
     )
     p.add_argument(
@@ -75,7 +75,7 @@ def main():
     # load model + processor
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, processor = load_model_processor_inference(
-        model_name=args.model_name_path,
+        model_name=args.model_name_or_path,
         quantization=args.quantization,
         devic=device
     )
@@ -113,5 +113,5 @@ if __name__ == "__main__":
 #   --split train \
 #   --output_dir ./question_embeddings \
 #   --batch_size 16 \
-#   --model_name_path your/model/path \
+#   --model_name_or_path your/model/path \
 #   --quantization int8
