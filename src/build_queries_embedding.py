@@ -6,6 +6,7 @@ from typing import List
 import torch
 from torch.utils.data import DataLoader
 from safetensors.torch import save_file
+from tqdm import tqdm
 
 from utils import load_model_processor_inference
 from mpdocvqa_datasets import MPDocQueryEmbeddDataset
@@ -94,14 +95,16 @@ def main():
     )
 
     # iterate, embed, and save
-    for batch in loader:
+    for batch in tqdm(loader, desc="Processing queries"):
         qids   = batch["question_ids"]
         texts  = batch["queries"]
         embeds = embed_queries_text(texts, processor, model, device)
         for i, qid in enumerate(qids):
-            filepath = os.path.join(output_dir, f"{qid}.safetensors")
-            save_file({"embeddings": embeds[i]}, filepath)
-            print(f"✔ Saved {qid} → {filepath}")
+            try:
+                filepath = os.path.join(output_dir, f"{qid}.safetensors")
+                save_file({"embeddings": embeds[i]}, filepath)
+            except Exception as e:
+                print(f"✗ Error saving {qid}: {str(e)}")
 
 
 if __name__ == "__main__":
