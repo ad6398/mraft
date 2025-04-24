@@ -47,7 +47,7 @@ def parse_args():
         required=True, help="Which split to process"
     )
     p.add_argument(
-        "--out_dir", type=str,  default="./question_embeddings",
+        "--output_dir", type=str,  default="./question_embeddings",
          help="Where to write .safetensors files"
     )
     
@@ -69,10 +69,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    os.makedirs(out_dir, exist_ok=True)
+    output_dir = args.output_dir
+    os.makedirs(output_dir, exist_ok=True)
 
     # load model + processor
-    out_dir = args.out_dir
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, processor = load_model_processor_inference(
         model_name=args.model_name_path,
@@ -99,7 +99,7 @@ def main():
         texts  = batch["queries"]
         embeds = embed_queries_text(texts, processor, model, device)
         for i, qid in enumerate(qids):
-            filepath = os.path.join(out_dir, f"{qid}.safetensors")
+            filepath = os.path.join(output_dir, f"{qid}.safetensors")
             save_file({"embeddings": embeds[i]}, filepath)
             print(f"✔ Saved {qid} → {filepath}")
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 # python make_embeddings.py \
 #   --data_dir /path/to/mpdocvqa \
 #   --split train \
-#   --out_dir ./question_embeddings \
+#   --output_dir ./question_embeddings \
 #   --batch_size 16 \
 #   --model_name_path your/model/path \
 #   --quantization int8
