@@ -1,6 +1,6 @@
 colpali-engine==0.3.10
 transformers==4.51.3
 datasets
-bitsandbytes==0.45.5
+# bitsandbytes==0.45.5
 faiss-cpu==1.10.0
 peft==0.15.2
