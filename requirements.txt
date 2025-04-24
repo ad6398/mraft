@@ -2,3 +2,4 @@ colpali-engine>0.3.1
 transformers>4.45.0
 datasets
 bitsandbytes==0.45.5
+faiss-cpu
