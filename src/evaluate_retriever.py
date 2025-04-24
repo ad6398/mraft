@@ -95,6 +95,10 @@ def parse_args():
                    help="Which split to evaluate")
     p.add_argument("--query_embeddings_dir", type=str, required=True,
                    help="Folder of query safetensors (e.g. data/train/queries_embedding)")
+    p.add_argument("--image_embeddings_dir", type=str, required=True,
+                   help="Folder containing image embeddings")
+    p.add_argument("--image_index_dir", type=str, required=True,
+                   help="Folder containing the FAISS index")
     p.add_argument("--top_k", type=int, default=1,
                    help="Number of pages to retrieve per query")
     p.add_argument("--output_json", type=str, default=None,
@@ -108,8 +112,6 @@ if __name__ == "__main__":
     questions_json = os.path.join(
         args.data_dir, "question_answers", f"{args.split}.json"
     )
-    image_embeddings_dir = os.path.join(args.data_dir, args.split, "image_embeddings")
-    image_index_dir       = os.path.join(args.data_dir, args.split, "index_folder")
     out_json = args.output_json or os.path.join(
         args.data_dir, args.split, "retrieval_results.json"
     )
@@ -117,8 +119,8 @@ if __name__ == "__main__":
     results, avg_p, avg_r = evaluate_mpdocvqa(
         questions_json=questions_json,
         query_embeddings_dir=args.query_embeddings_dir,
-        image_embeddings_dir=image_embeddings_dir,
-        image_index_dir=image_index_dir,
+        image_embeddings_dir=args.image_embeddings_dir,
+        image_index_dir=args.image_index_dir,
         top_k=args.top_k
     )
 
