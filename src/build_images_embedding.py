@@ -68,7 +68,7 @@ def main(args=None):
 
     # Determine device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("device:" device)
+    print("device:", device)
 
     # Load model and processor
     model, processor = load_model_processor_inference(
