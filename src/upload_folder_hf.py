@@ -22,7 +22,7 @@ def main():
     args = parser.parse_args()
 
     api = HfApi()
-    api.upload_large_folder(
+    api.upload_folder(
         folder_path=args.local_folder,
         repo_id=REPO_ID,
         repo_type="dataset",
