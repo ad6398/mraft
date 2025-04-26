@@ -37,14 +37,11 @@ def evaluate_mpdocvqa(
     # 2) Load FAISS index + token2pageuid
     index, token2pageuid = load_image_index(image_index_dir)
 
-    # 3) Load key.json and build token_idx → (file_name, local_idx)
-    with open(os.path.join(image_index_dir, "key.json")) as f:
-        key_list = json.load(f)  # list: filename per token idx
 
     token2fileidx = {}
     file2count = {}
 
-    for idx, fname in enumerate(key_list):
+    for idx, fname in enumerate(token2pageuid):
         if fname not in file2count:
             file2count[fname] = 0
         token2fileidx[idx] = (fname, file2count[fname])
