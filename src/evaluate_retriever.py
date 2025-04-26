@@ -1,7 +1,11 @@
+#!/usr/bin/env python
+
 import os
 import json
+import argparse
 import numpy as np
 import torch
+from pathlib import Path
 from tqdm import tqdm
 import safetensors.torch
 
@@ -53,7 +57,7 @@ def evaluate_mpdocvqa(
     for qid in tqdm(gt_map, desc=f"Evaluating (k={top_k})"):
         # Load query embedding
         q_emb = load_query_embedding(query_embeddings_dir, qid)  # [seq_len, dim]
-        q_np  = q_emb.to(torch.float32).numpy()
+        q_np = q_emb.to(torch.float32).numpy()
 
         # Search in FAISS
         D, I = index.search(q_np, top_k)  # [seq_len, k]
@@ -65,18 +69,16 @@ def evaluate_mpdocvqa(
         for t in range(q_np.shape[0]):
             per_tok = {}
             for j in range(top_k):
-                idx = I[t, j]  # token index
-
+                idx = I[t, j]
                 file_name, local_idx = token2fileidx[idx]
 
-                # Load the file lazily
                 if file_name not in loaded_files:
                     loaded_files[file_name] = safetensors.torch.load_file(
                         os.path.join(image_embeddings_dir, f"{file_name}.safetensors")
                     )["embedding"].to(torch.float32).cpu()
 
                 file_embeddings = loaded_files[file_name]
-                token_emb = file_embeddings[local_idx]  # [dim]
+                token_emb = file_embeddings[local_idx]
 
                 sim = float(np.dot(q_np[t], token_emb.numpy()))
                 uid = token2pageuid[idx]
@@ -105,3 +107,53 @@ def evaluate_mpdocvqa(
     avg_p = float(np.mean(precisions))
     avg_r = float(np.mean(recalls))
     return results, avg_p, avg_r
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Evaluate MPDocVQA retrieval and dump JSON results."
+    )
+    parser.add_argument("--data_dir", type=str, default="data",
+                        help="MPDocVQA root (contains question_answers/, train/, etc.)")
+    parser.add_argument("--split", type=str, choices=["train", "val", "test"], required=True,
+                        help="Which split to evaluate")
+    parser.add_argument("--query_embeddings_dir", type=str, required=True,
+                        help="Folder of query safetensors (e.g. data/train/queries_embedding)")
+    parser.add_argument("--image_embeddings_dir", type=str, required=True,
+                        help="Folder containing image embeddings")
+    parser.add_argument("--image_index_dir", type=str, required=True,
+                        help="Folder containing the FAISS index and key.json")
+    parser.add_argument("--top_k", type=int, default=1,
+                        help="Number of pages to retrieve per query")
+    parser.add_argument("--output_json", type=str, default=None,
+                        help="Where to write results JSON (default: data/{split}/retrieval_results.json)")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    questions_json = os.path.join(
+        args.data_dir, "question_answers", f"{args.split}.json"
+    )
+    out_json = args.output_json or os.path.join(
+        args.data_dir, args.split, "retrieval_results.json"
+    )
+
+    results, avg_p, avg_r = evaluate_mpdocvqa(
+        questions_json=questions_json,
+        query_embeddings_dir=args.query_embeddings_dir,
+        image_embeddings_dir=args.image_embeddings_dir,
+        image_index_dir=args.image_index_dir,
+        top_k=args.top_k
+    )
+
+    os.makedirs(os.path.dirname(out_json), exist_ok=True)
+
+    # Write JSON output
+    with open(out_json, "w") as f:
+        json.dump(results, f, indent=2)
+
+    print(f"\nWrote results for split='{args.split}' to {out_json}")
+    print(f"Average P@{args.top_k}: {avg_p:.4f}")
+    print(f"Average R@{args.top_k}: {avg_r:.4f}")
