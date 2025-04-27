@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from pathlib import Path
 from tqdm import tqdm
+import safetensors.torch
 
 from metrics import precision_recall_at_k
 
