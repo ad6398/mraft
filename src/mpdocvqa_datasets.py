@@ -2,6 +2,7 @@ import os
 import json
 from PIL import Image
 from torch.utils.data import Dataset
+import safetensors.torch
 
 class MPDocVQADataset(Dataset):
     def __init__(self, root_dir, split="train", transform=None):
@@ -139,3 +140,44 @@ class MPDocQuestionAndTruthDataset(Dataset):
             "question_id": str(qid),   # cast to str to match JSON keys
             "ground_truth": [pid],
         }
+    
+class MPDocVQANonFAISSRetrievalEvalDataset(Dataset):
+    """
+    Loads MPDocVQA split JSON, query embeddings, and per-page embeddings.
+    Each item is (qid, page_ids, q_emb, answer_page_id).
+    """
+
+    def __init__(self, questions_json: str, query_embeddings_dir: str, image_embeddings_dir: str):
+        with open(questions_json, "r") as f:
+            meta = json.load(f)
+        self.entries = []
+        for ex in meta["data"]:
+            qid = ex["questionId"]
+            page_ids = ex["page_ids"]
+            answer_page = page_ids[ex["answer_page_idx"]]
+            self.entries.append({
+                "qid": qid,
+                "page_ids": page_ids,
+                "answer": answer_page
+            })
+        self.query_dir = Path(query_embeddings_dir)
+        self.page_dir = Path(image_embeddings_dir)
+
+    def __len__(self):
+        return len(self.entries)
+
+    def __getitem__(self, idx):
+        rec = self.entries[idx]
+        qid = rec["qid"]
+        # load query embedding (seq_len × dim)
+        q_path = self.query_dir / f"{qid}.safetensors"
+        data = safetensors.torch.load_file(str(q_path))
+        q_emb = data["embeddings"].to(torch.float32)  # (L, D)
+
+        return (
+            qid,
+            rec["page_ids"],
+            q_emb,
+            rec["answer"]
+        )
+
