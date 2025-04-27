@@ -17,14 +17,15 @@ def precision_recall_at_k(retrieved_docs, ground_truth_docs, k):
         retrieved_docs = [retrieved_docs]
     if type(ground_truth_docs[0]) != list:
         ground_truth_docs= [ground_truth_docs]
-    print(retrieved_docs[0], ground_truth_docs[0] )
+    # print(retrieved_docs[0], ground_truth_docs[0] )
     for retrieved, relevant in zip(retrieved_docs, ground_truth_docs):
         relevant_set = set(relevant)
-        top_k = retrieved[:k]
+        top_k = set(retrieved[:k])
         true_positives = relevant_set.intersection(top_k)
         
         precision = len(true_positives) / k
         recall = len(true_positives) / len(relevant_set) if relevant_set else 0.0
+        print(relevant_set, top_k, precision, recall)
         
         precisions.append(precision)
         recalls.append(recall)
