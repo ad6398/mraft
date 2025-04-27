@@ -116,3 +116,26 @@ class MPDocQueryEmbeddDataset(Dataset):
         qid   = ex["questionId"]
         query = ex["question"]
         return {"question_id": qid, "query": query}
+
+
+class MPDocQuestionAndTruthDataset(Dataset):
+    def __init__(self, root_dir: str, split: str = "val"):
+        assert split in {"train", "val", "test"}
+        json_path = os.path.join(root_dir, f"question_answers/{split}.json")
+        with open(json_path, "r") as f:
+            meta = json.load(f)
+        self.examples = meta["data"]
+        self.root_dir = root_dir
+
+    def __len__(self):
+        return len(self.examples)
+
+    def __getitem__(self, idx):
+        ex = self.examples[idx]
+        qid = ex["questionId"]
+        # ground‐truth single positive
+        pid = ex["page_ids"][ex["answer_page_idx"]]
+        return {
+            "question_id": str(qid),   # cast to str to match JSON keys
+            "ground_truth": [pid],
+        }
