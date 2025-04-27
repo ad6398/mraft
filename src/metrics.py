@@ -13,7 +13,10 @@ def precision_recall_at_k(retrieved_docs, ground_truth_docs, k):
     """
     precisions = []
     recalls = []
-    
+    if type(retrieved_docs[0]) != list:
+        retrieved_docs = [retrieved_docs]
+    if type(ground_truth_docs[0]) != list:
+        ground_truth_docs= [ground_truth_docs]
     for retrieved, relevant in zip(retrieved_docs, ground_truth_docs):
         relevant_set = set(relevant)
         top_k = retrieved[:k]
