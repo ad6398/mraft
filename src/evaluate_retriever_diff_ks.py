@@ -22,8 +22,8 @@ def evaluate(root_dir: str, retrieval_json: str, top_k_max: int = 5):
         qid = ex["question_id"]
         # if qid not in retrieved:
         #     continue  # skip if no retrievals for this qid
-        gt_docs.append(ex["ground_truth"])
-        retrieved_docs.append(retrieved[qid])
+        gt_docs.append([ex["ground_truth"]])
+        retrieved_docs.append([retrieved[qid]])
 
     # 3) compute & print metrics for k=1..top_k_max
     print(f"Evaluating on {len(gt_docs)} queries\n")
