@@ -11,7 +11,7 @@ def evaluate(root_dir: str, retrieval_json: str, top_k_max: int = 5):
         retrievals = json.load(f)
     # map qid→[pid1, pid2, …]
     retrieved = {
-        str(qid): [entry[0] for entry in entries]
+        str(qid): [entry[0][-3:] for entry in entries]
         for qid, entries in retrievals.items()
     }
 
@@ -22,7 +22,7 @@ def evaluate(root_dir: str, retrieval_json: str, top_k_max: int = 5):
         qid = ex["question_id"]
         # if qid not in retrieved:
         #     continue  # skip if no retrievals for this qid
-        gt_docs.append(ex["ground_truth"])
+        gt_docs.append(ex["ground_truth"][-3:])
         retrieved_docs.append(retrieved[qid])
 
     # 3) compute & print metrics for k=1..top_k_max
