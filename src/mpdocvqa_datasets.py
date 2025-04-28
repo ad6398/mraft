@@ -3,6 +3,8 @@ import json
 from PIL import Image
 from torch.utils.data import Dataset
 import safetensors.torch
+from pathlib import Path
+import torch
 
 class MPDocVQADataset(Dataset):
     def __init__(self, root_dir, split="train", transform=None):
