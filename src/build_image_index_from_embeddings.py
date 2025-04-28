@@ -124,3 +124,5 @@ if __name__ == "__main__":
 #     faiss_index_type = "flatip"
 
 # main(indexer_args)
+
+# python build_image_index_from_embeddings.py --embeddings_dir /home/ubuntu/sft-colqwen-mpdocvqa-21-4-1k-image-embeddings/image_embeddings/ --output_dir /home/ubuntu/sft-colqwen-image-index-dir
