@@ -1,7 +1,7 @@
 import re
 import string
 from typing import List, Set, Tuple, Union
-from word2number import w2n  # pip install word2number
+from word2number import w2n 
 
 
 def precision_recall_at_k(retrieved_docs, ground_truth_docs, k):
