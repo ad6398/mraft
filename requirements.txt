@@ -4,3 +4,4 @@ datasets
 # bitsandbytes==0.45.5
 faiss-cpu==1.10.0
 peft==0.15.2
+word2number
