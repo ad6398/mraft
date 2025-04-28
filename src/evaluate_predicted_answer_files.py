@@ -3,7 +3,6 @@ import json
 import argparse
 from typing import List
 
-# import your evaluation fn (or paste its implementation here)
 from metrics import evaluate_all  
 
 def load_json(path: str):
