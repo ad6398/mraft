@@ -6,12 +6,13 @@ from PIL import Image
 import torch
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
+from transformers import BitsAndBytesConfig
 
 def load_json(path):
     with open(path, 'r') as f:
         return json.load(f)
 
-def predict_answers(split_json, cands_json, images_dir, top_k, output_path):
+def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quant):
     # 1) load data
     split = load_json(split_json)
     # assume split has key "data" which is a list of examples
@@ -20,9 +21,27 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path):
 
     # 2) init model & processor
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # build kwargs for from_pretrained based on args.quantization
+    load_kwargs = { "device_map": "auto" }
+    if quant == "4bit":
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16
+        )
+        load_kwargs["quantization_config"] = bnb_config
+    elif quant == "8bit":
+        load_kwargs["load_in_8bit"] = True
+    elif quant == "bf16":
+        load_kwargs["torch_dtype"] = torch.bfloat16
+    else:
+        load_kwargs["torch_dtype"] = torch.float32
+
     model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         "Qwen/Qwen2.5-VL-7B-Instruct",
-        torch_dtype="auto", device_map="auto"
+        **load_kwargs
     )
     processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
 
@@ -90,7 +109,7 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path):
         results.append({
             "questionId": qid,
             "answer": answer,
-            "answer_page": int(cands[0][0].rsplit("_p", 1)),
+            "answer_page": int(cands[0][0].rsplit("_p", 1)[1]),
             # "candidates": cands
         })
 
@@ -111,6 +130,10 @@ if __name__ == "__main__":
                    help="How many top candidates to feed into the model")
     p.add_argument("--output", "--output_path", required=True,
                    help="Where to write the predictions JSON")
+    p.add_argument("--quantization",
+                   choices=["none","4bit","8bit","bf16"],
+                   default="bf16",
+                   help="Whether to quantize the model weights")
     args = p.parse_args()
 
     predict_answers(
@@ -118,5 +141,6 @@ if __name__ == "__main__":
         args.cands_json,
         args.images_dir,
         args.top_k,
-        args.output
+        args.output,
+        args.quantization
     )
