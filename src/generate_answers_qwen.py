@@ -7,6 +7,7 @@ import torch
 from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
 from transformers import BitsAndBytesConfig
+from tqdm import tqdm
 
 def load_json(path):
     with open(path, 'r') as f:
@@ -47,7 +48,7 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
 
     results = []
     model.eval()
-    for ex in examples:
+    for ex in tqdm(examples):
         qid = ex.get("questionId")
         question = ex.get("question") or ex.get("content") or ""
         # get top-K candidates (they should be strings like "doc123_p_5")
