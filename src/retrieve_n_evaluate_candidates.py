@@ -43,7 +43,7 @@ def evaluate_candidate_pages(dataset: MPDocVQANonFAISSRetrievalEvalDataset, top_
         p, r = precision_recall_at_k(preds, [answer_page], k=top_k)
         precisions.append(p)
         recalls.append(r)
-        print(f"{qid} →  P@{top_k}={p:.3f},  R@{top_k}={r:.3f}")
+        # print(f"{qid} →  P@{top_k}={p:.3f},  R@{top_k}={r:.3f}")
 
     avg_p = float(np.mean(precisions))
     avg_r = float(np.mean(recalls))
