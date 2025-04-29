@@ -31,11 +31,11 @@ def evaluate_candidate_pages(dataset: MPDocVQANonFAISSRetrievalEvalDataset, top_
             # MaxSim: for each query token find max over page tokens, then sum
             sim_mat = q_np @ p_emb.T              # (L, N)
             per_token_max = sim_mat.max(axis=1)   # (L,)
-            page_scores[pid] = per_token_max.sum()
+            page_scores[pid] = float(per_token_max.sum())  # Convert to Python float
 
         # sort pages by score desc
         ranked = sorted(page_scores.items(), key=lambda x: x[1], reverse=True)
-        top_pages = ranked[:top_k]
+        top_pages = [(pid, float(score)) for pid, score in ranked[:top_k]]  # Convert scores to Python floats
         results[qid] = top_pages
 
         # compute metrics
