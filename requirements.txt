@@ -6,3 +6,4 @@ faiss-cpu==1.10.0
 peft==0.15.2
 word2number
 qwen-vl-utils
+trl
