@@ -1,0 +1,3 @@
+unsloth
+trl
+qwen-vl-utils
