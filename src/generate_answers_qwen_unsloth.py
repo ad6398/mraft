@@ -19,36 +19,10 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
     # assume split has key "data" which is a list of examples
     examples = split.get("data", split)
     cands_map = load_json(cands_json)
-
-    # 2) init model & processor
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    # build kwargs for from_pretrained based on args.quantization
-    load_kwargs = { "device_map": "auto" }
-    if quant == "4bit":
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16
-        )
-        load_kwargs["quantization_config"] = bnb_config
-    elif quant == "8bit":
-        load_kwargs["load_in_8bit"] = True
-    elif quant == "bf16":
-        load_kwargs["torch_dtype"] = torch.bfloat16
-    else:
-        load_kwargs["torch_dtype"] = torch.float32
-
-    # model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-    #     "Qwen/Qwen2.5-VL-7B-Instruct",
-    #     **load_kwargs
-    # )
-    # processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
     
     model, processor = FastVisionModel.from_pretrained(
         "unsloth/Qwen2.5-VL-7B-Instruct",
-        load_in_4bit = False, # Use 4bit to reduce memory use. False for 16bit LoRA.
+        load_in_4bit = True if quant=="4bit" else False , # Use 4bit to reduce memory use. False for 16bit LoRA.
         use_gradient_checkpointing = "unsloth", # True or "unsloth" for long context
     )
 
@@ -105,7 +79,7 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
                 temprature=1.5,
                 min_p=0.1
             )
-            
+
 
         # strip off the prompt
         trimmed = [
