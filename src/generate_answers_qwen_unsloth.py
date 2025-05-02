@@ -45,11 +45,12 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
     #     **load_kwargs
     # )
     # processor = AutoProcessor.from_pretrained("Qwen/Qwen2.5-VL-7B-Instruct")
-    model, tokenizer = FastVisionModel.from_pretrained(
-    "unsloth/Qwen2.5-VL-7B-Instruct",
-    load_in_4bit = False, # Use 4bit to reduce memory use. False for 16bit LoRA.
-    use_gradient_checkpointing = "unsloth", # True or "unsloth" for long context
-)
+    
+    model, processor = FastVisionModel.from_pretrained(
+        "unsloth/Qwen2.5-VL-7B-Instruct",
+        load_in_4bit = False, # Use 4bit to reduce memory use. False for 16bit LoRA.
+        use_gradient_checkpointing = "unsloth", # True or "unsloth" for long context
+    )
 
     results = []
     model.eval()
@@ -63,7 +64,6 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
 
         # build the vision+text message for Qwen
         # first, load all page images for these candidates
-        
         vision_inputs = []
         for cand in cands:
             img_path = os.path.join(images_dir, f"{cand[0]}.jpg")
@@ -98,7 +98,14 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
 
         # 4) generate
         with torch.no_grad():
-            out_ids = model.generate(**inputs, max_new_tokens=128)
+            out_ids = model.generate(
+                **inputs,
+                max_new_tokens=128,
+                use_cache=True,
+                temprature=1.5,
+                min_p=0.1
+            )
+            
 
         # strip off the prompt
         trimmed = [
