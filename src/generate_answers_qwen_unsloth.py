@@ -133,3 +133,4 @@ if __name__ == "__main__":
         args.quantization
     )
 
+# python generate_answers_qwen_unsloth.py --split_json --cands_json --images_dir --top_k --output
