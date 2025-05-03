@@ -8,6 +8,11 @@ from unsloth import FastVisionModel
 from qwen_vl_utils import process_vision_info
 from transformers import BitsAndBytesConfig
 from tqdm import tqdm
+import json
+SYSTEM_MESSAGE = """
+You are a vision-language assistant specialized in answering questions based on document page images.
+Given a question about the document, use the provided page images to only generate accurate, short and concise answers.
+"""
 
 def load_json(path):
     with open(path, 'r') as f:
@@ -39,14 +44,14 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
         # build the vision+text message for Qwen
         # first, load all page images for these candidates
         vision_inputs = []
+        vision_inputs.append({"type": "text", "text": f"{SYSTEM_MESSAGE}\nQuestion: {question}"})
         for cand in cands:
             img_path = os.path.join(images_dir, f"{cand[0]}.jpg")
             if not os.path.isfile(img_path):
                 raise FileNotFoundError(f"Image for candidate {cand!r} not found at {img_path}")
             vision_inputs.append({"type": "image", "image": f"file://{img_path}"})
 
-        # then append the text part
-        vision_inputs.append({"type": "text", "text": question})
+        
 
         # assemble into the chat format
         messages = [
