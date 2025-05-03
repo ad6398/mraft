@@ -61,18 +61,21 @@ def main():
             gold_page = original_pages[answer_page_idx]
 
         # Retrieved candidate pages (top 4)
-        retrieved = candidate_map.get(qid, [])
+        retrieved = candidate_map.get(str(qid), [])
         # Exclude gold from retrieved list
-        filtered = [p for p in retrieved if p != gold_page]
+        filtered = [p for p,_ in retrieved if p != gold_page]
 
         if idx in answer_indices:
             # 60%: gold + top 3 distractors
-            pages = [gold_page] + filtered[:3]
+            pages = [gold_page] + filtered[:min(3, len(filtered))]
+            
+            # print(gold_page, qid, retrieved, filtered)
             answers = original_answers
             new_answer_idx = 0
         else:
             # 40%: top 4 distractors only
-            pages = filtered[:4]
+            # print(qid)
+            pages = filtered[:min(4, len(filtered))]
             answers = ["No sufficient evidence to answer the query."]
             new_answer_idx = None
 
