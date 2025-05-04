@@ -7,95 +7,80 @@ import torch
 from unsloth import FastVisionModel 
 from qwen_vl_utils import process_vision_info
 from transformers import BitsAndBytesConfig
-from unsloth.data.collators import UnslothVisionDataCollator
 from tqdm import tqdm
-
+import json
 SYSTEM_MESSAGE = """
-You are a vision-language assistant specialized in answering questions based on document page images.
-Given a question about the document, use the provided page images to only generate accurate, short and concise answers.
+Output only answer.
 """
+# SYSTEM_MESSAGE = """
+# You are a vision-language assistant specialized in answering questions based on document page images.
+# Given a question about the document, use the provided page images to only generate accurate, short and concise answers.
+# """
 
 def load_json(path):
     with open(path, 'r') as f:
         return json.load(f)
 
-def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quant, batch_size=4):
+def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quant, model_id):
     # 1) load data
     split = load_json(split_json)
+    # assume split has key "data" which is a list of examples
     examples = split.get("data", split)
     cands_map = load_json(cands_json)
-
+    
     model, processor = FastVisionModel.from_pretrained(
-        "unsloth/Qwen2.5-VL-7B-Instruct",
-        load_in_4bit = True if quant=="4bit" else False,
-        use_gradient_checkpointing = "unsloth",
+        model_id,
+        load_in_4bit = True if quant=="4bit" else False , # Use 4bit to reduce memory use. False for 16bit LoRA.
+        use_gradient_checkpointing = "unsloth", # True or "unsloth" for long context
     )
+    FastVisionModel.for_inference(model) 
 
-    model.eval()
-    collator = UnslothVisionDataCollator(model=model, tokenizer=processor)
-
-    batch_inputs = []
-    batch_metadata = []
     results = []
-
+    model.eval()
     for ex in tqdm(examples):
         qid = ex.get("questionId")
         question = ex.get("question") or ex.get("content") or ""
+        # get top-K candidates (they should be strings like "doc123_p_5")
         cands = cands_map.get(str(qid))[:top_k]
-        if not cands:
-            continue
+        # if not cands: we don't do this here - Spartans
+        #     continue
 
-        vision_inputs = [{"type": "text", "text": f"{SYSTEM_MESSAGE}\nQuestion: {question}"}]
+        # build the vision+text message for Qwen
+        # first, load all page images for these candidates
+        vision_inputs = []
+        vision_inputs.append({"type": "text", "text": f"{SYSTEM_MESSAGE}\nQuestion: {question}"})
         for cand in cands:
             img_path = os.path.join(images_dir, f"{cand[0]}.jpg")
             if not os.path.isfile(img_path):
                 raise FileNotFoundError(f"Image for candidate {cand!r} not found at {img_path}")
             vision_inputs.append({"type": "image", "image": f"file://{img_path}"})
 
-        messages = [{"role": "user", "content": vision_inputs}]
         
 
-        batch_inputs.append(messages)
-        batch_metadata.append((qid, cands))
+        # assemble into the chat format
+        messages = [
+            {
+                "role": "user",
+                "content": vision_inputs
+            }
+        ]
+        # print(messages)
 
-        if len(batch_inputs) >= batch_size:
-            inputs = collator(batch_inputs)
-            inputs = {k: v.to(model.device) for k, v in inputs.items()}
-
-            with torch.no_grad():
-                out_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=128,
-                    use_cache=True,
-                    temperature=1.5,
-                    min_p=0.1
-                )
-
-            trimmed = [
-                output[len(inp):]
-                for inp, output in zip(inputs["input_ids"], out_ids)
-            ]
-            answers = processor.batch_decode(
-                trimmed,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False
-            )
-
-            for (qid, cands), answer in zip(batch_metadata, answers):
-                results.append({
-                    "questionId": qid,
-                    "answer": answer.strip(),
-                    "answer_page": int(cands[0][0].rsplit("_p", 1)[1]),
-                })
-
-            batch_inputs = []
-            batch_metadata = []
-
-    # process remaining examples
-    if batch_inputs:
-        inputs = collator(batch_inputs)
+        # 3) prepare inputs
+        text = processor.apply_chat_template(messages,
+                                             tokenize=False,
+                                             add_generation_prompt=True)
+        image_feats, video_feats = process_vision_info(messages)
+        inputs = processor(
+            text=[text],
+            images=image_feats,
+            # videos=video_feats,
+            padding=True,
+            return_tensors="pt"
+        )
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
 
+        # 4) generate
         with torch.no_grad():
             out_ids = model.generate(
                 **inputs,
@@ -105,22 +90,27 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
                 min_p=0.1
             )
 
+
+        # strip off the prompt
         trimmed = [
             output[len(inp):]
             for inp, output in zip(inputs["input_ids"], out_ids)
         ]
         answers = processor.batch_decode(
-            trimmed,
+            out_ids,
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False
         )
+        answer = answers[0].strip()
 
-        for (qid, cands), answer in zip(batch_metadata, answers):
-            results.append({
-                "questionId": qid,
-                "answer": answer.strip(),
-                "answer_page": int(cands[0][0].rsplit("_p", 1)[1]),
-            })
+        # 5) record result
+        print("answer",answer)
+        results.append({
+            "questionId": qid,
+            "answer": answer,
+            "answer_page": int(cands[0][0].rsplit("_p", 1)[1]),
+            # "candidates": cands
+        })
 
     # 6) write out
     with open(output_path, 'w') as f:
@@ -143,8 +133,8 @@ if __name__ == "__main__":
                    choices=["none","4bit","8bit","bf16"],
                    default="bf16",
                    help="Whether to quantize the model weights")
-    p.add_argument("--batch_size", type=int, default=4,
-                   help="Batch size for inference")
+    p.add_argument('--model_id',    type=str, required=True, help="Model ID to load (e.g., Qwen/Qwen2-VL-7B-Instruct)")
+
     args = p.parse_args()
 
     predict_answers(
@@ -154,5 +144,8 @@ if __name__ == "__main__":
         args.top_k,
         args.output,
         args.quantization,
-        args.batch_size
+        args.model_id
+        
     )
+
+# python generate_answers_qwen_unsloth.py --split_json --cands_json --images_dir --top_k --output
