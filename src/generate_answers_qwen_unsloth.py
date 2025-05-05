@@ -9,6 +9,8 @@ from qwen_vl_utils import process_vision_info
 from transformers import BitsAndBytesConfig
 from tqdm import tqdm
 import json
+import gc
+
 SYSTEM_MESSAGE = """
 Output only answer.
 """
@@ -16,7 +18,16 @@ Output only answer.
 def load_json(path):
     with open(path, 'r') as f:
         return json.load(f)
-
+def load_and_resize_image(image_path, image_size=512): # unsloth default
+    image = Image.open(image_path).convert("RGB")
+    if image_size is None:
+        return image  # no resizing
+    elif isinstance(image_size, int):
+        image.thumbnail((image_size, image_size), Image.Resampling.LANCZOS)
+    elif isinstance(image_size, (tuple, list)):
+        image = image.resize(image_size, Image.Resampling.LANCZOS)
+    return image
+    
 def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quant, model_id="unsloth/Qwen2.5-VL-7B-Instruct"):
     # 1) load data
     split = load_json(split_json)
@@ -34,7 +45,7 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
     results = []
     # model.eval()
     batch = []
-    batch_size = 4
+    batch_size = 1
     batch_meta = []
     for ex in tqdm(examples):
         qid = ex.get("questionId")
@@ -52,7 +63,8 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
             img_path = os.path.join(images_dir, f"{cand[0]}.jpg")
             if not os.path.isfile(img_path):
                 raise FileNotFoundError(f"Image for candidate {cand!r} not found at {img_path}")
-            vision_inputs.append({"type": "image", "image": f"file://{img_path}"})
+            image = load_and_resize_image(img_path)
+            vision_inputs.append({"type": "image", "image": image})
 
         # assemble into the chat format
         messages = [
@@ -67,6 +79,7 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
         batch_meta.append({'qid': qid, 'cands': cands})
 
         if len(batch) == batch_size or ex == examples[-1]:
+            # print("processing ", batch_meta)
             texts = []
             images = []
             videos = []
@@ -81,15 +94,16 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
                 videos.append(video_feats)
 
 
-
+            
             inputs = processor(
                 text=texts,
                 images=images,
-                videos=videos,
-                padding=True,
+                # videos=videos,
+                padding="longest",
                 return_tensors="pt"
             )
             inputs = {k: v.to(model.device) for k, v in inputs.items()}
+            # print([(k, v.shape) for k, v in inputs.items()])
 
             # 4) generate
             # with torch.no_grad():
@@ -110,12 +124,13 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
             answers = processor.batch_decode(
                 trimmed,
                 skip_special_tokens=True,
-                clean_up_tokenization_spaces=False
+                clean_up_tokenization_spaces=True
             )
 
             for raw_ans, meta in zip(answers, batch_meta):
                 answer = raw_ans.strip()
                 cands = meta['cands']
+                # print("ans", answer)
 
                 # 5) record result
                 results.append({
@@ -126,6 +141,9 @@ def predict_answers(split_json, cands_json, images_dir, top_k, output_path, quan
                 })
             batch = []
             batch_meta = []
+            del inputs, out_ids, trimmed, answers
+            torch.cuda.empty_cache()
+            gc.collect()
 
     # 6) write out
     with open(output_path, 'w') as f:
