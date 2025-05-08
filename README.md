@@ -1,4 +1,4 @@
-# M‑RAFT: Multimodal Retrieval‑Augmented Fine‑Tuning
+# M-RAFT: Retriever Aware Finetuning of Multimodal LLM for Multimodal RAG Systems
 
 M‑RAFT is a framework for multimodal Retrieval‑Augmented Fine‑Tuning on the MP‑DocVQA dataset.  
 It combines a **ColQwen dual‑encoder retriever** with a **Qwen‑2.5 VL reader** fine‑tuned using a RAFT‑style contrastive objective to improve answer fidelity in multi‑page document QA.
